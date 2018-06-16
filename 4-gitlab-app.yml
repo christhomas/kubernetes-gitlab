@@ -299,7 +299,7 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    ingress.kubernetes.io/proxy-body-size: 1000m
+    nginx.ingress.kubernetes.io/proxy-body-size: 2000m
 spec:
   tls:
     - secretName: tls-gitlab-antimatter-studios-com
