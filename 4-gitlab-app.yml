@@ -5,10 +5,10 @@ metadata:
   namespace: gitlab
 ---
 
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
+# -- Create the permissions the ingress needs control over
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  namespace: gitlab
   name: gitlab-ci
 rules:
   - apiGroups: [""]
@@ -16,22 +16,25 @@ rules:
     verbs: ["create","read","delete"]
   - apiGroups: [""]
     resources: ["pods","pods/exec"]
-    verbs: ["create","get","update","delete"]
+    verbs: ["create","get","update","delete","list"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles"]
+    verbs: ["*"]
 ---
 
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
+# -- Bind the permissions onto the service account
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: gitlab-ci
-  namespace: gitlab
-subjects:
-  - kind: ServiceAccount
-    name: gitlab-ci
-    namespace: gitlab
 roleRef:
-  kind: Role
-  name: gitlab-ci
   apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gitlab-ci
+subjects:
+- kind: ServiceAccount
+  name: gitlab-ci
+  namespace: gitlab
 ---
 
 apiVersion: apps/v1beta1
@@ -103,7 +106,7 @@ spec:
               mountPath: /certs
       containers:
         - name: gitlab
-          image: sameersbn/gitlab:10.5.1
+          image: sameersbn/gitlab:10.7.2
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
@@ -115,19 +118,19 @@ spec:
             - secretRef:
                 name: postgres-secret
           ports:
-            - containerPort: 22
-              name: ssh
-              protocol: TCP
             - containerPort: 80
               name: http
               protocol: TCP
+            - containerPort: 22
+              name: ssh
+              protocol: TCP
           resources:
             limits:
-              cpu: "500m"
-              memory: 2Gi
+              cpu: "1000m"
+              memory: 4Gi
             requests:
               cpu: "250m"
-              memory: "1Gi"
+              memory: 500Mi
           volumeMounts:
             - name: gitlab-data
               mountPath: /home/git/data
@@ -224,43 +227,43 @@ spec:
 #                    values:
 #                      - gitlab-ci-runner
       volumes:
-      - name: gitlab-ci-runner-scripts
-        projected:
-          sources:
-            - configMap:
-                name: gitlab-ci-runner-scripts
-                items:
-                  - key: run.sh
-                    path: run.sh
-                    mode: 0755
+        - name: gitlab-ci-runner-scripts
+          projected:
+            sources:
+              - configMap:
+                  name: gitlab-ci-runner-scripts
+                  items:
+                    - key: run.sh
+                      path: run.sh
+                      mode: 0755
       serviceAccountName: gitlab-ci
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
         supplementalGroups: [999]
       containers:
-      - image: gitlab/gitlab-runner:v10.5.0
-        name: gitlab-ci-runner
-        command:
-          - /scripts/run.sh
-        envFrom:
-          - configMapRef:
-              name: gitlab-ci-runner-cm
-          - secretRef:
-              name: gitlab-ci-token
-        env:
-          - name: RUNNER_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-        ports:
-          - containerPort: 9100
-            name: http-metrics
-            protocol: TCP
-        volumeMounts:
-          - name: gitlab-ci-runner-scripts
-            mountPath: "/scripts"
-            readOnly: true
+        - image: gitlab/gitlab-runner:v10.7.1
+          name: gitlab-ci-runner
+          command:
+            - /scripts/run.sh
+          envFrom:
+            - configMapRef:
+                name: gitlab-ci-runner-cm
+            - secretRef:
+                name: gitlab-ci-token
+          env:
+            - name: RUNNER_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: 9100
+              name: http-metrics
+              protocol: TCP
+          volumeMounts:
+            - name: gitlab-ci-runner-scripts
+              mountPath: "/scripts"
+              readOnly: true
       restartPolicy: Always
 ---
 
@@ -312,16 +315,9 @@ spec:
           - backend:
               serviceName: gitlab
               servicePort: 80
-    - host: ssh.gitlab.antimatter-studios.com
-      http:
-        paths:
-          - backend:
-              serviceName: gitlab
-              servicePort: 10022
     - host: registry.gitlab.antimatter-studios.com
       http:
         paths:
           - backend:
               serviceName: gitlab
               servicePort: 5000
----
