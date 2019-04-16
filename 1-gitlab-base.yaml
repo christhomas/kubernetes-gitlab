@@ -31,16 +31,16 @@ data:
   GITLAB_REGISTRY_HOST: "registry.gitlab.antimatter-studios.com"
   GITLAB_REGISTRY_PORT: "443"
   GITLAB_REGISTRY_API_URL: "https://registry.gitlab.antimatter-studios.com"
-  GITLAB_REGISTRY_KEY_PATH: "/certs/registry.key"
+  GITLAB_REGISTRY_KEY_PATH: "/certs/tls.key"
   # GitLab Backup
   GITLAB_BACKUP_SCHEDULE: "daily"
   GITLAB_BACKUP_TIME: "04:30"
   # GitLab DB
   DB_ADAPTER: "postgresql"
-  DB_HOST: "localhost"
+  DB_HOST: "gitlab-postgres.gitlab"
   DB_PORT: "5432"
   # GitLab Redis
-  REDIS_HOST: "localhost"
+  REDIS_HOST: "gitlab-redis.gitlab"
   REDIS_PORT: "6379"
   # Nginx settings
   NGINX_MAX_UPLOAD_SIZE: "100m"
@@ -63,7 +63,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: postgres-cm
+  name: gitlab-postgres-cm
   namespace: gitlab
   labels:
     app: gitlab
@@ -75,7 +75,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: registry-cm
+  name: gitlab-registry-cm
   namespace: gitlab
   labels:
     app: gitlab
@@ -84,28 +84,11 @@ data:
   REGISTRY_STORAGE_DELETE_ENABLED: "true"
   REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: "/registry"
   REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: "redis"
-  REGISTRY_REDIS_ADDR: "redis:6379"
+  REGISTRY_REDIS_ADDR: "gitlab-redis.gitlab:6379"
   REGISTRY_AUTH_TOKEN_REALM: "https://gitlab.antimatter-studios.com/jwt/auth"
   REGISTRY_AUTH_TOKEN_SERVICE: "container_registry"
   REGISTRY_AUTH_TOKEN_ISSUER: "gitlab-issuer"
-  REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: "/certs/registry.crt"
----
-
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: registry-cert-data
-  namespace: gitlab
-  labels:
-    app: gitlab
-data:
-  CERT_CREATE_COUNTRY: "DE"
-  CERT_CREATE_STATE: "BERLIN"
-  CERT_CREATE_CITY: "Berlin"
-  CERT_CREATE_ORGANISATION: "Antimatter Studios"
-  CERT_CREATE_ORGANISATIONAL_UNIT: "DevOps"
-  CERT_CREATE_FQDN: "registry.gitlab.antimatter-studios.com"
-  CERT_CREATE_EMAIL: "gitlab@antimatter-studios.com"
+  REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: "/certs/tls.crt"
 ---
 
 apiVersion: v1
@@ -119,7 +102,7 @@ data:
   REGISTER_NON_INTERACTIVE: "true"
   REGISTER_LOCKED: "false"
   CI_SERVER_URL: "https://gitlab.antimatter-studios.com/ci"
-  METRICS_SERVER: "0.0.0.0:9100"
+  LISTEN_ADDRESS: "0.0.0.0:9100"
   RUNNER_REQUEST_CONCURRENCY: "2"
   RUNNER_EXECUTOR: "kubernetes"
   KUBERNETES_NAMESPACE: "gitlab"

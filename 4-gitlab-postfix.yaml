@@ -1,0 +1,73 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: gitlab-postgres
+  namespace: gitlab
+  labels:
+    app: gitlab
+spec:
+  serviceName: gitlab-postgres
+  replicas: 1
+  volumeClaimTemplates:
+    - metadata:
+        name: gitlab-postgres
+        namespace: gitlab
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 5Gi
+        selector:
+          matchLabels:
+            volume-name: gitlab-postgres
+  template:
+    metadata:
+      labels:
+        app: gitlab-postgres
+    spec:
+      nodeSelector:
+        gitlab: "true"
+      containers:
+        - name: postgresql
+          image: sameersbn/postgresql:10
+          envFrom:
+            - configMapRef:
+                name: gitlab-postgres-cm
+            - secretRef:
+                name: gitlab-postgres-secret
+          env:
+            - name: DB_EXTENSION
+              value: pg_trgm
+          ports:
+            - name: postgres
+              containerPort: 5432
+          volumeMounts:
+            - name: gitlab-postgres
+              mountPath: /var/lib/postgresql
+          livenessProbe:
+            exec:
+              command: ["pg_isready","-h","localhost","-U","postgres"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command: ["pg_isready","-h","localhost","-U","postgres"]
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+---
+
+# -- Service for the Ingress to target
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-postgres
+  namespace: gitlab
+  labels:
+    app: gitlab
+spec:
+  selector:
+    app: gitlab-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

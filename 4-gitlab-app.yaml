@@ -1,0 +1,124 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: gitlab
+  namespace: gitlab
+  labels:
+    app: gitlab
+spec:
+  serviceName: gitlab
+  replicas: 1
+  volumeClaimTemplates:
+    - metadata:
+        name: gitlab-data
+        namespace: gitlab
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 50Gi
+        selector:
+          matchLabels:
+            volume-name: gitlab-data
+  template:
+    metadata:
+      labels:
+        app: gitlab
+    spec:
+      nodeSelector:
+        gitlab: "true"
+      containers:
+        - name: gitlab
+          image: sameersbn/gitlab:11.3.0
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: gitlab-cm
+            - configMapRef:
+                name: gitlab-postgres-cm
+            - secretRef:
+                name: gitlab-secret
+            - secretRef:
+                name: gitlab-postgres-secret
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+            - containerPort: 22
+              name: ssh
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: 4Gi
+            requests:
+              cpu: "250m"
+              memory: 500Mi
+          volumeMounts:
+            - name: gitlab-data
+              mountPath: /home/git/data
+            - name: certs
+              mountPath: /certs
+      volumes:
+        - name: certs
+          secret:
+            secretName: tls-gitlab-antimatter-studios-com
+---
+
+# -- Service for the Ingress to target
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-web
+  namespace: gitlab
+  labels:
+    app: gitlab
+spec:
+  selector:
+    app: gitlab
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+
+# -- Service for the SSH pod
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-ssh
+  namespace: gitlab
+  labels:
+    app: gitlab
+spec:
+  selector:
+    app: gitlab
+  ports:
+    - name: ssh
+      port: 10022
+      targetPort: 22
+---
+
+# -- Ingress configuration for Gitlab
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: gitlab-web
+  namespace: gitlab
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 2000m
+spec:
+  tls:
+  - secretName: tls-gitlab-antimatter-studios-com
+    hosts:
+      - "gitlab.antimatter-studios.com"
+  rules:
+  - host: gitlab.antimatter-studios.com
+    http:
+      paths:
+      - backend:
+          serviceName: gitlab-web
+          servicePort: 80
