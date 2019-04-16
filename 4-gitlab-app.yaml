@@ -1,7 +1,7 @@
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
-  name: gitlab
+  name: web
   namespace: gitlab
   labels:
     app: gitlab
@@ -10,7 +10,7 @@ spec:
   replicas: 1
   volumeClaimTemplates:
     - metadata:
-        name: gitlab-data
+        name: data
         namespace: gitlab
       spec:
         accessModes: [ "ReadWriteOnce" ]
@@ -20,26 +20,55 @@ spec:
         selector:
           matchLabels:
             volume-name: gitlab-data
+    - metadata:
+        name: registry-certs
+        namespace: gitlab
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 500Ki
+        selector:
+          matchLabels:
+            volume-name: gitlab-registry-certs
   template:
     metadata:
       labels:
-        app: gitlab
+        app: gitlab-web
     spec:
       nodeSelector:
         gitlab: "true"
+      initContainers:
+        - name: registry-certs
+          image: alpine:latest
+          command:
+            - sh
+            - "-c"
+            - |
+              apk --no-cache add openssl
+              cd /certs
+              find /certs -type f -delete
+              echo "Create Signing Key and CSR"
+              openssl req -nodes -newkey rsa:2048 -keyout registry.key -out registry.csr -subj "/CN=gitlab-issuer"
+              echo "Self-Sign Certificate"
+              openssl x509 -in registry.csr -out registry.crt -req -signkey registry.key -days 3650
+              chmod -v 777 /certs/*
+          volumeMounts:
+            - name: registry-certs
+              mountPath: /certs
       containers:
         - name: gitlab
           image: sameersbn/gitlab:11.3.0
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
-                name: gitlab-cm
+                name: web
             - configMapRef:
-                name: gitlab-postgres-cm
+                name: postgres
             - secretRef:
-                name: gitlab-secret
+                name: web
             - secretRef:
-                name: gitlab-postgres-secret
+                name: postgres
           ports:
             - containerPort: 80
               name: http
@@ -50,75 +79,32 @@ spec:
           resources:
             limits:
               cpu: "1000m"
-              memory: 4Gi
+              memory: "4Gi"
             requests:
               cpu: "250m"
-              memory: 500Mi
+              memory: "500Mi"
           volumeMounts:
-            - name: gitlab-data
+            - name: data
               mountPath: /home/git/data
-            - name: certs
+            - name: registry-certs
               mountPath: /certs
-      volumes:
-        - name: certs
-          secret:
-            secretName: tls-gitlab-antimatter-studios-com
 ---
 
 # -- Service for the Ingress to target
 apiVersion: v1
 kind: Service
 metadata:
-  name: gitlab-web
+  name: web
   namespace: gitlab
   labels:
     app: gitlab
 spec:
   selector:
-    app: gitlab
+    app: gitlab-web
   ports:
     - name: http
       port: 80
       targetPort: 80
----
-
-# -- Service for the SSH pod
-apiVersion: v1
-kind: Service
-metadata:
-  name: gitlab-ssh
-  namespace: gitlab
-  labels:
-    app: gitlab
-spec:
-  selector:
-    app: gitlab
-  ports:
     - name: ssh
       port: 10022
       targetPort: 22
----
-
-# -- Ingress configuration for Gitlab
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: gitlab-web
-  namespace: gitlab
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
-    kubernetes.io/tls-acme: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: 2000m
-spec:
-  tls:
-  - secretName: tls-gitlab-antimatter-studios-com
-    hosts:
-      - "gitlab.antimatter-studios.com"
-  rules:
-  - host: gitlab.antimatter-studios.com
-    http:
-      paths:
-      - backend:
-          serviceName: gitlab-web
-          servicePort: 80

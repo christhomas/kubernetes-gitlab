@@ -1,16 +1,16 @@
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
-  name: gitlab-registry
+  name: registry
   namespace: gitlab
   labels:
     app: gitlab
 spec:
-  serviceName: gitlab-registry
+  serviceName: registry
   replicas: 1
   volumeClaimTemplates:
     - metadata:
-        name: gitlab-docker-registry
+        name: docker-registry
         namespace: gitlab
       spec:
         accessModes: [ "ReadWriteOnce" ]
@@ -32,60 +32,36 @@ spec:
           image: registry:latest
           envFrom:
             - configMapRef:
-                name: gitlab-registry-cm
+                name: registry
             - secretRef:
-                name: gitlab-registry-secret
+                name: registry
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "100Mi"
+            requests:
+              cpu: "100m"
+              memory: "100Mi"
           ports:
             - name: registry
               containerPort: 5000
           volumeMounts:
-            - name: gitlab-docker-registry
+            - name: docker-registry
               mountPath: /registry
-            - name: certs
-              mountPath: /certs
-      volumes:
-        - name: certs
-          secret:
-            secretName: tls-gitlab-antimatter-studios-com
 ---
 
 # -- Service for the Ingress to target
 apiVersion: v1
 kind: Service
 metadata:
-  name: gitlab-registry
+  name: registry
   namespace: gitlab
   labels:
     app: gitlab
 spec:
   selector:
-    app: registry
+    app: gitlab-registry
   ports:
     - name: registry
       port: 5000
       targetPort: 5000
----
-
-# -- Ingress configuration for Gitlab
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: gitlab-registry
-  namespace: gitlab
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
-    kubernetes.io/tls-acme: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: 2000m
-spec:
-  tls:
-  - secretName: tls-registry-gitlab-antimatter-studios-com
-    hosts:
-      - "registry.gitlab.antimatter-studios.com"
-  rules:
-  - host: registry.gitlab.antimatter-studios.com
-    http:
-      paths:
-      - backend:
-          serviceName: gitlab-registry
-          servicePort: 5000

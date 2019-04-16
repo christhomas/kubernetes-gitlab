@@ -1,0 +1,30 @@
+# -- Ingress configuration for Gitlab
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: gitlab
+  namespace: gitlab
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 2000m
+spec:
+  tls:
+  - secretName: tls-gitlab
+    hosts:
+      - "gitlab.antimatter-studios.com"
+      - "gitlab-registry.antimatter-studios.com"
+  rules:
+    - host: gitlab.antimatter-studios.com
+      http:
+        paths:
+        - backend:
+            serviceName: web
+            servicePort: 80
+    - host: gitlab-registry.antimatter-studios.com
+      http:
+        paths:
+        - backend:
+            serviceName: registry
+            servicePort: 5000

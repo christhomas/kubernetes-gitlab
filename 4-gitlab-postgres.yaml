@@ -1,16 +1,16 @@
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
-  name: gitlab-postgres
+  name: postgres
   namespace: gitlab
   labels:
     app: gitlab
 spec:
-  serviceName: gitlab-postgres
+  serviceName: postgres
   replicas: 1
   volumeClaimTemplates:
     - metadata:
-        name: gitlab-postgres
+        name: postgres
         namespace: gitlab
       spec:
         accessModes: [ "ReadWriteOnce" ]
@@ -32,17 +32,24 @@ spec:
           image: sameersbn/postgresql:10
           envFrom:
             - configMapRef:
-                name: gitlab-postgres-cm
+                name: postgres
             - secretRef:
-                name: gitlab-postgres-secret
+                name: postgres
           env:
             - name: DB_EXTENSION
               value: pg_trgm
+          resources:
+            limits:
+              cpu: "250m"
+              memory: "250Mi"
+            requests:
+              cpu: "250m"
+              memory: "125Mi"
           ports:
             - name: postgres
               containerPort: 5432
           volumeMounts:
-            - name: gitlab-postgres
+            - name: postgres
               mountPath: /var/lib/postgresql
           livenessProbe:
             exec:
@@ -60,7 +67,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: gitlab-postgres
+  name: postgres
   namespace: gitlab
   labels:
     app: gitlab

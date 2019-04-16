@@ -1,7 +1,7 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: gitlab-redis
+  name: redis
   namespace: gitlab
   labels:
     app: gitlab
@@ -15,6 +15,13 @@ spec:
       containers:
         - name: redis
           image: sameersbn/redis:4.0.9-1
+          resources:
+            limits:
+              cpu: "250m"
+              memory: "250Mi"
+            requests:
+              cpu: "250m"
+              memory: "125Mi"
           ports:
             - name: redis
               containerPort: 6379
@@ -34,7 +41,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: gitlab-redis
+  name: redis
   namespace: gitlab
   labels:
     app: gitlab

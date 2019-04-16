@@ -42,3 +42,17 @@ spec:
   hostPath:
     path: /mnt/kubernetes/gitlab-registry
 ---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gitlab-registry-certs
+  namespace: gitlab
+  labels:
+    volume-name: gitlab-registry-certs
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  capacity:
+    storage: 500Ki
+  hostPath:
+    path: /mnt/kubernetes/gitlab-registry/certs
