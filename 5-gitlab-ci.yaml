@@ -6,23 +6,23 @@ metadata:
   labels:
     app: gitlab-ci-runner
 spec:
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
         app: gitlab-ci-runner
     spec:
       # These rules appear to tell kubernetes to schedule each pod on different nodes
-      #      affinity:
-      #        podAntiAffinity:
-      #          requiredDuringSchedulingIgnoredDuringExecution:
-      #            - topologyKey: "kubernetes.io/hostname"
-      #              labelSelector:
-      #                matchExpressions:
-      #                  - key: app
-      #                    operator: In
-      #                    values:
-      #                      - gitlab-ci-runner
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: "kubernetes.io/hostname"
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - gitlab-ci-runner
       volumes:
       - name: ci-runner-scripts
         projected:
