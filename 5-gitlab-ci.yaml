@@ -6,23 +6,21 @@ metadata:
   labels:
     app: gitlab-ci-runner
 spec:
-  replicas: 1
+  replicas: 3
   template:
     metadata:
       labels:
         app: gitlab-ci-runner
     spec:
-      # These rules appear to tell kubernetes to schedule each pod on different nodes
+      # Don't run the gitlab ci runner on the gitlab node (it's resource hungry)
       affinity:
-        podAntiAffinity:
+        nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-            - topologyKey: "kubernetes.io/hostname"
-              labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - gitlab-ci-runner
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: gitlab
+                    operator: NotIn
+                    values: ["true"]
       volumes:
       - name: ci-runner-scripts
         projected:
@@ -53,13 +51,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-          resources:
-            limits:
-              cpu: "500m"
-              memory: "500Mi"
-            requests:
-              cpu: "500m"
-              memory: "500Mi"
+#          resources:
+#            limits:
+#              cpu: "500m"
+#              memory: "500Mi"
+#            requests:
+#              cpu: "500m"
+#              memory: "500Mi"
           ports:
           - containerPort: 9100
             name: http-metrics
