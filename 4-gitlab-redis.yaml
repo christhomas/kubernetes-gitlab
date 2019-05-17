@@ -26,10 +26,10 @@ spec:
             - name: redis
               containerPort: 6379
           livenessProbe:
-            exec:
-              command: ["redis-cli","ping"]
+            tcpSocket:
+              port: 6379
             initialDelaySeconds: 30
-            timeoutSeconds: 5
+            periodSeconds: 10
           readinessProbe:
             exec:
               command: ["redis-cli","ping"]
