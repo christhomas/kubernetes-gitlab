@@ -52,10 +52,10 @@ spec:
             - name: postgres
               mountPath: /var/lib/postgresql
           livenessProbe:
-            exec:
-              command: ["pg_isready","-h","localhost","-U","postgres"]
+            tcpSocket:
+              port: 5432
             initialDelaySeconds: 30
-            timeoutSeconds: 5
+            periodSeconds: 10
           readinessProbe:
             exec:
               command: ["pg_isready","-h","localhost","-U","postgres"]

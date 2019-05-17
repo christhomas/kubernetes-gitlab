@@ -60,6 +60,16 @@ spec:
         - name: gitlab
           image: sameersbn/gitlab:11.3.0
           imagePullPolicy: Always
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
           envFrom:
             - configMapRef:
                 name: web
