@@ -3,6 +3,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: gitlab
+  labels:
+    istio-injection: enabled
 ---
 
 apiVersion: v1
@@ -138,7 +140,7 @@ data:
     }
     trap 'unregister' EXIT HUP INT QUIT PIPE TERM
     echo "Registering runner ${RUNNER_NAME} ..."
-    /usr/bin/gitlab-ci-multi-runner register -r ${GITLAB_CI_TOKEN}
+    until /usr/bin/gitlab-ci-multi-runner register -r ${GITLAB_CI_TOKEN}; do echo "Waiting 5 seconds longer to register runner"; sleep 5; done
     sed -i 's/^concurrent.*/concurrent = '"${RUNNER_REQUEST_CONCURRENCY}"'/' /home/gitlab-runner/.gitlab-runner/config.toml
     echo "Starting runner ${RUNNER_NAME} ..."
     /usr/bin/gitlab-ci-multi-runner run -n ${RUNNER_NAME} &
