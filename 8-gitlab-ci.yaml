@@ -1,4 +1,4 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ci-runner
@@ -6,6 +6,9 @@ metadata:
   labels:
     app: gitlab-ci-runner
 spec:
+  selector:
+    matchLabels:
+      app: gitlab-ci-runner
   replicas: 3
   template:
     metadata:
