@@ -40,7 +40,7 @@ spec:
         runAsUser: 999
         supplementalGroups: [999]
       containers:
-        - image: gitlab/gitlab-runner:v11.3.1
+        - image: gitlab/gitlab-runner:v11.11.2
           name: gitlab-ci-runner
           command:
             - /scripts/run.sh
@@ -70,4 +70,3 @@ spec:
             mountPath: "/scripts"
             readOnly: true
       restartPolicy: Always
----

@@ -1,4 +1,4 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: web
@@ -6,6 +6,9 @@ metadata:
   labels:
     app: gitlab
 spec:
+  selector:
+    matchLabels:
+      app: gitlab-web
   serviceName: gitlab
   replicas: 1
   volumeClaimTemplates:
@@ -58,7 +61,7 @@ spec:
               mountPath: /certs
       containers:
         - name: gitlab
-          image: sameersbn/gitlab:11.3.0
+          image: sameersbn/gitlab:11.11.3
           imagePullPolicy: Always
           livenessProbe:
             tcpSocket:
