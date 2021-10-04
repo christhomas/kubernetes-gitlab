@@ -32,7 +32,7 @@ spec:
         gitlab: "true"
       containers:
         - name: registry
-          image: registry:latest
+          image: registry:2.6
           livenessProbe:
             tcpSocket:
               port: 5000
