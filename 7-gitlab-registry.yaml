@@ -32,7 +32,7 @@ spec:
         gitlab: "true"
       containers:
         - name: registry
-          image: registry:2.6
+          image: registry:latest
           livenessProbe:
             tcpSocket:
               port: 5000
@@ -61,6 +61,13 @@ spec:
           volumeMounts:
             - name: docker-registry
               mountPath: /registry
+            - name: registry-certs
+              mountPath: /certs/registry
+              readOnly: true
+      volumes:
+        - name: registry-certs 
+          secret: 
+            secretName: tls-gitlab
 ---
 
 # -- Service for the Ingress to target

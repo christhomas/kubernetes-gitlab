@@ -23,17 +23,6 @@ spec:
         selector:
           matchLabels:
             volume-name: gitlab-data
-    - metadata:
-        name: registry-certs
-        namespace: gitlab
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        resources:
-          requests:
-            storage: 500Ki
-        selector:
-          matchLabels:
-            volume-name: gitlab-registry-certs
   template:
     metadata:
       labels:
@@ -41,24 +30,6 @@ spec:
     spec:
       nodeSelector:
         gitlab: "true"
-      initContainers:
-        - name: registry-certs
-          image: alpine:latest
-          command:
-            - sh
-            - "-c"
-            - |
-              apk --no-cache add openssl
-              cd /certs
-              find /certs -type f -delete
-              echo "Create Signing Key and CSR"
-              openssl req -nodes -newkey rsa:2048 -keyout registry.key -out registry.csr -subj "/CN=gitlab-issuer"
-              echo "Self-Sign Certificate"
-              openssl x509 -in registry.csr -out registry.crt -req -signkey registry.key -days 3650
-              chmod -v 777 /certs/*
-          volumeMounts:
-            - name: registry-certs
-              mountPath: /certs
       containers:
         - name: gitlab
           image: sameersbn/gitlab:11.11.3
@@ -100,7 +71,12 @@ spec:
             - name: data
               mountPath: /home/git/data
             - name: registry-certs
-              mountPath: /certs
+              mountPath: /certs/registry
+              readOnly: true
+      volumes:
+        - name: registry-certs 
+          secret: 
+            secretName: tls-gitlab
 ---
 
 # -- Service for the Ingress to target
